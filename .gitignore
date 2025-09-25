@@ -1,0 +1,96 @@
+# PlatformIO
+.pio
+.vscode/.browse.c_cpp.db*
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build files
+build/
+dist/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+
+# Config files with sensitive data (uncomment if needed)
+# include/config.h
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+.tmp/
+
+# IDE specific
+.idea/
+*.iml
+.clang-format
+.clang-tidy
+
+# Documentation build
+docs/_build/
+docs/.doctrees/
+
+# Node (if using any web tools)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Compiled binaries
+*.bin
+*.elf
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# ESP-IDF specific
+sdkconfig
+sdkconfig.old
+build/
+
+# Project specific
+*.orig
