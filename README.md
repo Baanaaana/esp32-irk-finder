@@ -2,6 +2,8 @@
 
 A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) through Bluetooth pairing. The IRK can be used with Home Assistant, ESPresense, or other tracking systems to identify iPhones despite their rotating MAC addresses.
 
+![ESP32 IRK Finder Web Interface](esp32-irk-finder-webserver.jpg)
+
 ## Features
 
 - BLE secure pairing with iPhone
@@ -17,6 +19,43 @@ A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) throug
 - PlatformIO (VS Code extension recommended)
 - iPhone for testing
 
+## Installing PlatformIO
+
+PlatformIO is required to build and upload the firmware. Choose one of these installation methods:
+
+### Option 1: VS Code Extension (Recommended)
+
+1. Install [Visual Studio Code](https://code.visualstudio.com/)
+2. Open VS Code and go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
+3. Search for "PlatformIO IDE"
+4. Click Install on the PlatformIO IDE extension
+5. Restart VS Code when prompted
+6. The PlatformIO icon will appear in the left sidebar
+
+### Option 2: Command Line Interface
+
+#### macOS (using Homebrew):
+```bash
+brew install platformio
+```
+
+#### Linux/macOS/Windows (using pip):
+```bash
+# Ensure Python 3.6+ is installed
+python3 -m pip install -U platformio
+```
+
+#### Windows (using installer):
+Download and run the installer from [platformio.org](https://platformio.org/install/cli)
+
+### Option 3: PlatformIO Core (Standalone)
+
+For advanced users who prefer using PlatformIO with their own editor:
+```bash
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
+python3 get-platformio.py
+```
+
 ## Installation
 
 1. Clone this repository:
@@ -25,15 +64,30 @@ git clone https://github.com/yourusername/esp32-irk-finder.git
 cd esp32-irk-finder
 ```
 
-2. Build and upload using PlatformIO:
-```bash
-pio run -t upload
-```
+2. Open the project:
+   - **VS Code**: File → Open Folder → Select the esp32-irk-finder folder
+   - **CLI**: Navigate to the project directory in terminal
 
-3. Monitor serial output:
-```bash
-pio device monitor
-```
+3. Build and upload the firmware:
+
+   **VS Code Method:**
+   - Click PlatformIO icon in sidebar
+   - Select "Upload" in the Project Tasks
+
+   **CLI Method:**
+   ```bash
+   pio run -t upload
+   ```
+
+4. Monitor serial output to see the ESP32's IP address:
+
+   **VS Code Method:**
+   - Click PlatformIO icon → "Monitor"
+
+   **CLI Method:**
+   ```bash
+   pio device monitor
+   ```
 
 ## Usage
 
