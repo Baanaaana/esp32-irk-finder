@@ -4,6 +4,31 @@ A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) throug
 
 ![ESP32 IRK Finder Web Interface](esp32-irk-finder-webserver.jpg)
 
+## Quick Start - Using Prebuilt Firmware
+
+### Web Installer (Recommended)
+1. Connect your ESP32 to your computer via USB
+2. Open Chrome or Edge browser
+3. Go to https://web.esphome.io/
+4. Click "CONNECT" and select your ESP32
+5. Click "INSTALL"
+6. Choose "Choose File" and select `releases/esp32-irk-finder.bin`
+7. Click "INSTALL" and wait for completion
+
+### Manual Install with esptool
+1. Download `esp32-irk-finder.bin` from the `releases` folder
+2. Install esptool (if not already installed):
+   ```bash
+   pip install esptool
+   ```
+3. Flash the firmware:
+   ```bash
+   esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
+     write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB \
+     0x0 esp32-irk-finder.bin
+   ```
+   Replace `/dev/ttyUSB0` with your ESP32's port (e.g., `COM3` on Windows, `/dev/cu.usbserial-0001` on macOS)
+
 ## Features
 
 - BLE secure pairing with iPhone
@@ -16,12 +41,14 @@ A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) throug
 ## Requirements
 
 - ESP32 development board
-- PlatformIO (VS Code extension recommended)
 - iPhone for testing
+- PlatformIO (only needed if building from source)
 
-## Installing PlatformIO
+## Building from Source
 
-PlatformIO is required to build and upload the firmware. Choose one of these installation methods:
+### Installing PlatformIO
+
+PlatformIO is required to build the firmware from source. Choose one of these installation methods:
 
 ### Option 1: VS Code Extension (Recommended)
 
@@ -56,34 +83,7 @@ curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installe
 python3 get-platformio.py
 ```
 
-## Installation
-
-### Option A: Using Prebuilt Firmware (Easiest)
-
-#### Web Installer (Recommended)
-1. Connect your ESP32 to your computer via USB
-2. Open Chrome or Edge browser
-3. Go to https://web.esphome.io/
-4. Click "CONNECT" and select your ESP32
-5. Click "INSTALL"
-6. Choose "Choose File" and select `releases/esp32-irk-finder.bin`
-7. Click "INSTALL" and wait for completion
-
-#### Manual Install with esptool
-1. Download `esp32-irk-finder.bin` from the `releases` folder
-2. Install esptool (if not already installed):
-   ```bash
-   pip install esptool
-   ```
-3. Flash the firmware:
-   ```bash
-   esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
-     write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB \
-     0x0 esp32-irk-finder.bin
-   ```
-   Replace `/dev/ttyUSB0` with your ESP32's port (e.g., `COM3` on Windows, `/dev/cu.usbserial-0001` on macOS)
-
-### Option B: Building from Source
+### Building and Installing
 
 1. Clone this repository:
 ```bash
