@@ -38,9 +38,9 @@ For detailed instructions, see the **[Installation Guide](docs/installation.md)*
 
 ## Supported Devices
 
-- **ESP32** - Original ESP32 chip
-- **ESP32-S3** - Latest generation with USB support
-- **ESP32-C3** - RISC-V based, cost-effective option
+- **ESP32**
+- **ESP32-S3**
+- **ESP32-C3**
 
 ## How It Works
 
