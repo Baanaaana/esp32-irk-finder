@@ -129,6 +129,9 @@ esp_ble_adv_data_t heart_rate_adv_config = {};
 esp_ble_adv_data_t heart_rate_scan_rsp_config = {};
 esp_ble_adv_params_t heart_rate_adv_params = {};
 
+// Random address for BLE (required for iOS compatibility)
+static uint8_t rand_addr[6] = {0xC0, 0x01, 0x02, 0x03, 0x04, 0x05};
+
 struct gatts_profile_inst {
     esp_gatts_cb_t gatts_cb;
     uint16_t gatts_if;
@@ -958,6 +961,44 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             } else {
                 ESP_LOGI(GATTS_TABLE_TAG, "Authentication failed, reason: 0x%x",
                          param->ble_security.auth_cmpl.fail_reason);
+                Serial.printf("Authentication failed, reason: 0x%x\n", param->ble_security.auth_cmpl.fail_reason);
+            }
+            break;
+
+        case ESP_GAP_BLE_KEY_EVT:
+            // Key exchange event - this is when we receive the IRK
+            ESP_LOGI(GATTS_TABLE_TAG, "ESP_GAP_BLE_KEY_EVT, key type = %d", param->ble_security.ble_key.key_type);
+
+            if (param->ble_security.ble_key.key_type == ESP_LE_KEY_PID) {
+                // We received the IRK (Identity Resolving Key)
+                ESP_LOGI(GATTS_TABLE_TAG, "Received IRK from peer device");
+
+                // Extract and display the IRK immediately
+                uint8_t* irk_bytes = param->ble_security.ble_key.p_key_value.pid_key.irk;
+                char irk_str[33];
+                for(int j = 0; j < 16; j++) {
+                    sprintf(&irk_str[j * 2], "%02X", irk_bytes[j]);
+                }
+                irk_str[32] = '\0';
+
+                currentIRK = String(irk_str);
+                currentIRKBase64 = base64Encode(irk_bytes, 16);
+                currentIRKReversed = reverseIRK(irk_bytes);
+                currentIRKArray = formatIRKArray(irk_bytes);
+                irkRetrieved = true;
+
+                Serial.println("\n========================================");
+                Serial.println("IRK RECEIVED VIA KEY EXCHANGE!");
+                Serial.println("--- IRK Formats ---");
+                Serial.print("Standard Hex: ");
+                Serial.println(currentIRK);
+                Serial.print("ESPresense (reversed): ");
+                Serial.println(currentIRKReversed);
+                Serial.print("Base64 (HA Private BLE): ");
+                Serial.println(currentIRKBase64);
+                Serial.print("Hex Array: ");
+                Serial.println(currentIRKArray);
+                Serial.println("========================================\n");
             }
             break;
 
@@ -995,6 +1036,8 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
     switch (event) {
         case ESP_GATTS_REG_EVT:
             esp_ble_gap_set_device_name(EXAMPLE_DEVICE_NAME);
+            // Set random address for iOS compatibility
+            esp_ble_gap_set_rand_addr(rand_addr);
             esp_ble_gap_config_local_privacy(true);
             esp_ble_gatts_create_attr_tab(heart_rate_gatt_db, gatts_if, HRS_IDX_NB, HEART_RATE_SVC_INST_ID);
             break;
@@ -1002,6 +1045,8 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
         case ESP_GATTS_CONNECT_EVT:
             ESP_LOGI(GATTS_TABLE_TAG, "Device connected");
             Serial.println("Device connected - starting security");
+
+            // Start encryption with MITM protection immediately
             esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
             break;
 
@@ -1077,7 +1122,7 @@ void BT_Init() {
 
     // Configure security parameters
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-    esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
+    esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;  // No input/output capability (matching working example)
     uint8_t key_size = 16;
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
@@ -1287,9 +1332,9 @@ void setup() {
     // Initialize Bluetooth
     BT_Init();
 
-    // Clear all bonded devices on startup
-    delay(1000);
-    remove_all_bonded_devices();
+    // Don't clear bonded devices - allow re-connection to previously paired devices
+    // delay(1000);
+    // remove_all_bonded_devices();
 
     Serial.println("\n========================================");
     Serial.println("System ready!");
