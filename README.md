@@ -62,23 +62,6 @@ For detailed instructions, see the **[Installation Guide](docs/installation.md)*
 
 **Note:** The ESP32 won't appear in iPhone Settings > Bluetooth. You must use a BLE scanner app.
 
-## Integration Examples
-
-### Home Assistant
-```yaml
-ble_monitor:
-  devices:
-    - mac: "Random"
-      irk: "YOUR_IRK_BASE64_HERE"
-      name: "iPhone"
-```
-
-### ESPresense
-```yaml
-irk:
-  "YOUR_REVERSED_IRK_HERE": "iPhone"
-```
-
 ## Security Note
 
 The IRK is sensitive information that can be used to track your iPhone. Keep it secure and only share with trusted systems.
