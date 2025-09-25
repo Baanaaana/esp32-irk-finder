@@ -51,8 +51,10 @@ pio device monitor
 ### Getting the iPhone IRK:
 
 1. Power on the ESP32 and wait for it to initialize
-2. Note the IP address from serial output or connect to AP mode (ESP32-IRK-Finder)
-3. Open web browser and navigate to the ESP32's IP address
+2. Note the IP address from serial output or connect to AP mode:
+   - SSID: `ESP32-IRK-FINDER`
+   - Password: `12345678`
+3. Open web browser and navigate to the ESP32's IP address (192.168.4.1 in AP mode)
 4. Click "Start New Pairing" button on the web interface
 5. On your iPhone:
    - Go to Settings → Bluetooth

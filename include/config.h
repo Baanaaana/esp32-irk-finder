@@ -7,7 +7,7 @@
 
 // Alternative: Use AP mode instead of connecting to WiFi
 #define USE_AP_MODE false
-#define AP_SSID "ESP32-IRK-Finder"
+#define AP_SSID "ESP32-IRK-FINDER"
 #define AP_PASSWORD "12345678"
 
 // BLE Configuration
