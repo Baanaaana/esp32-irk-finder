@@ -76,7 +76,7 @@ String base64Encode(const uint8_t* data, size_t length) {
 String reverseIRK(const uint8_t* irk) {
     char reversed[33];
     for (int i = 0; i < 16; i++) {
-        sprintf(&reversed[i * 2], "%02X", irk[15 - i]);
+        sprintf(&reversed[i * 2], "%02x", irk[15 - i]);
     }
     reversed[32] = '\0';
     return String(reversed);
@@ -88,7 +88,7 @@ String formatIRKArray(const uint8_t* irk) {
     for (int i = 0; i < 16; i++) {
         if (i > 0) result += ",";
         char hex[6];
-        sprintf(hex, "0x%02X", irk[i]);
+        sprintf(hex, "0x%02x", irk[i]);
         result += hex;
     }
     return result;
@@ -896,7 +896,7 @@ static void show_bonded_devices(void) {
         uint8_t* irk_bytes = dev_list[i].bond_key.pid_key.irk;
 
         for(int j = 0; j < 16; j++) {
-            sprintf(&irk_str[j * 2], "%02X", irk_bytes[j]);
+            sprintf(&irk_str[j * 2], "%02x", irk_bytes[j]);
         }
         irk_str[32] = '\0';
 
@@ -1022,7 +1022,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 uint8_t* irk_bytes = param->ble_security.ble_key.p_key_value.pid_key.irk;
                 char irk_str[33];
                 for(int j = 0; j < 16; j++) {
-                    sprintf(&irk_str[j * 2], "%02X", irk_bytes[j]);
+                    sprintf(&irk_str[j * 2], "%02x", irk_bytes[j]);
                 }
                 irk_str[32] = '\0';
 

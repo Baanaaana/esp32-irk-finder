@@ -109,7 +109,7 @@ The reset function:
 
 ### Standard Hex Format
 ```
-112233445566778899AABBCCDDEEFF00
+112233445566778899aabbccddeeff00
 ```
 - Direct representation of the 16-byte IRK
 - Most commonly used format
@@ -117,7 +117,7 @@ The reset function:
 
 ### ESPresense Format (Reversed)
 ```
-00FFEEDDCCBBAA998877665544332211
+00ffeeddccbbaa998877665544332211
 ```
 - Byte order reversed for ESPresense compatibility
 - Required by some tracking systems
@@ -133,7 +133,7 @@ ESIzRFVmd4iZqrvM3e7/AA==
 
 ### Hex Array Format
 ```
-0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF,0x00
+0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff,0x00
 ```
 - C-style array format
 - Useful for programming and debugging

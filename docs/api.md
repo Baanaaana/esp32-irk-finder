@@ -41,10 +41,10 @@ http://esp32-irk-finder.local/
 **Response:**
 ```json
 {
-  "irk": "112233445566778899AABBCCDDEEFF00",
-  "irkReversed": "00FFEEDDCCBBAA998877665544332211",
+  "irk": "112233445566778899aabbccddeeff00",
+  "irkReversed": "00ffeeddccbbaa998877665544332211",
   "irkBase64": "ESIzRFVmd4iZqrvM3e7/AA==",
-  "irkArray": "0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xAA,0xBB,0xCC,0xDD,0xEE,0xFF,0x00",
+  "irkArray": "0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff,0x00",
   "mac": "AA:BB:CC:DD:EE:FF",
   "irkRetrieved": true,
   "isAPMode": false,
@@ -248,7 +248,7 @@ Use the `irkReversed` field from the API:
 
 ```yaml
 irk:
-  "00FFEEDDCCBBAA998877665544332211": "iPhone"
+  "00ffeeddccbbaa998877665544332211": "iPhone"
 ```
 
 ### Python Integration
