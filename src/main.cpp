@@ -21,10 +21,20 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
+#include <Preferences.h>
+#include <ArduinoJson.h>
 #include "config.h"
 
 // Web server
 AsyncWebServer server(WEB_SERVER_PORT);
+
+// Preferences for storing WiFi credentials
+Preferences preferences;
+
+// WiFi configuration
+String stored_ssid = "";
+String stored_password = "";
+bool isAPMode = false;
 
 // Global IRK storage
 String currentIRK = "No IRK retrieved yet";
@@ -434,6 +444,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                     const statusDiv = document.getElementById('status');
                     const formatsDiv = document.getElementById('irk-formats');
                     const macDiv = document.getElementById('mac-container');
+                    const wifiConfigDiv = document.getElementById('wifi-config-link');
 
                     if (data.irkRetrieved) {
                         statusDiv.className = 'alert alert-success';
@@ -445,6 +456,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                         statusDiv.textContent = 'Waiting for iPhone pairing...';
                         formatsDiv.classList.add('hidden');
                         macDiv.classList.add('hidden');
+                    }
+
+                    // Show WiFi config link if in AP mode
+                    if (data.isAPMode && wifiConfigDiv) {
+                        wifiConfigDiv.classList.remove('hidden');
                     }
                 });
         }
@@ -514,6 +530,13 @@ const char index_html[] PROGMEM = R"rawliteral(
             </div>
         </div>
 
+        <div id="wifi-config-link" class="card hidden">
+            <div class="card-content" style="text-align: center;">
+                <p style="margin-bottom: 1rem;">You are in Access Point mode. Configure WiFi to connect to your network.</p>
+                <a href="/wifi" class="btn btn-primary" style="display: inline-block; width: auto; padding: 0.625rem 2rem;">Configure WiFi</a>
+            </div>
+        </div>
+
         <div class="instructions">
             <h3>How to retrieve iPhone IRK</h3>
             <ol>
@@ -532,6 +555,254 @@ const char index_html[] PROGMEM = R"rawliteral(
                 <li>Enter passkey: <code>123456</code></li>
                 <li>After successful pairing, the IRK will appear above in multiple formats</li>
             </ol>
+        </div>
+    </div>
+</body>
+</html>
+)rawliteral";
+
+// WiFi Configuration HTML page
+const char wifi_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>WiFi Configuration - ESP32 IRK Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --background: #ffffff; --foreground: #0a0a0a;
+            --card: #ffffff; --card-foreground: #0a0a0a;
+            --primary: #171717; --primary-foreground: #fafafa;
+            --secondary: #f5f5f5; --secondary-foreground: #171717;
+            --muted: #f5f5f5; --muted-foreground: #737373;
+            --destructive: #ef4444; --destructive-foreground: #fafafa;
+            --border: #e5e5e5; --input: #e5e5e5;
+            --ring: #171717; --radius: 0.5rem;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", sans-serif;
+            line-height: 1.5; color: var(--foreground);
+            background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+            min-height: 100vh; padding: 1rem;
+        }
+        .container { max-width: 48rem; margin: 0 auto; padding: 2rem; }
+        h1 {
+            font-size: 2rem; font-weight: 700; text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #171717, #404040);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 1rem;
+        }
+        .card-content { padding: 1.5rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .label {
+            font-size: 0.875rem; font-weight: 600;
+            color: var(--foreground); margin-bottom: 0.5rem;
+            display: block;
+        }
+        .input, .select {
+            width: 100%; padding: 0.625rem 0.875rem;
+            font-size: 0.875rem;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 2px);
+            color: var(--foreground);
+            transition: border-color 0.2s;
+        }
+        .input:focus, .select:focus {
+            outline: none;
+            border-color: var(--ring);
+            box-shadow: 0 0 0 3px rgb(23 23 23 / 0.05);
+        }
+        .btn {
+            padding: 0.625rem 1.25rem;
+            font-size: 0.875rem; font-weight: 500;
+            border-radius: calc(var(--radius) - 2px);
+            border: 1px solid transparent;
+            cursor: pointer; transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            border-color: var(--primary);
+        }
+        .btn-primary:hover { background: #262626; }
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--secondary-foreground);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover { background: #e5e5e5; }
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .alert-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .networks-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 2px);
+            margin-bottom: 1rem;
+        }
+        .network-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .network-item:hover { background-color: var(--secondary); }
+        .network-item:last-child { border-bottom: none; }
+        .network-ssid { font-weight: 600; }
+        .network-rssi {
+            font-size: 0.75rem;
+            color: var(--muted-foreground);
+            margin-left: 0.5rem;
+        }
+        .loading { text-align: center; padding: 2rem; color: var(--muted-foreground); }
+        .hidden { display: none; }
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .link:hover { text-decoration: underline; }
+        .mt-2 { margin-top: 1rem; }
+    </style>
+    <script>
+        let scanInterval;
+
+        function scanNetworks() {
+            document.getElementById('networks-list').innerHTML = '<div class="loading">Scanning...</div>';
+
+            fetch('/api/wifi/scan')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('networks-list');
+                    if (data.networks && data.networks.length > 0) {
+                        list.innerHTML = '';
+                        data.networks.forEach(network => {
+                            const item = document.createElement('div');
+                            item.className = 'network-item';
+                            item.innerHTML = `
+                                <span class="network-ssid">${network.ssid}</span>
+                                <span class="network-rssi">${network.rssi} dBm</span>
+                            `;
+                            item.onclick = () => selectNetwork(network.ssid);
+                            list.appendChild(item);
+                        });
+                    } else {
+                        list.innerHTML = '<div class="loading">No networks found</div>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('networks-list').innerHTML =
+                        '<div class="loading">Error scanning networks</div>';
+                });
+        }
+
+        function selectNetwork(ssid) {
+            document.getElementById('ssid').value = ssid;
+        }
+
+        function saveWiFi() {
+            const ssid = document.getElementById('ssid').value;
+            const password = document.getElementById('password').value;
+
+            if (!ssid) {
+                alert('Please enter WiFi SSID');
+                return;
+            }
+
+            fetch('/api/wifi/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ssid, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('WiFi settings saved! ESP32 will restart and connect to the network.');
+                    setTimeout(() => { window.location.href = '/'; }, 3000);
+                } else {
+                    alert('Failed to save WiFi settings');
+                }
+            });
+        }
+
+        function clearWiFi() {
+            if (confirm('Clear saved WiFi credentials?')) {
+                fetch('/api/wifi/clear', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert('WiFi credentials cleared');
+                        location.reload();
+                    });
+            }
+        }
+
+        window.onload = () => {
+            scanNetworks();
+            scanInterval = setInterval(scanNetworks, 10000); // Scan every 10 seconds
+        };
+
+        window.onbeforeunload = () => {
+            if (scanInterval) clearInterval(scanInterval);
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>WiFi Configuration</h1>
+
+        <div class="alert alert-info">
+            Connect ESP32 to your WiFi network
+        </div>
+
+        <div class="card">
+            <div class="card-content">
+                <h3 style="margin-bottom: 1rem;">Available Networks</h3>
+                <div id="networks-list" class="networks-list">
+                    <div class="loading">Scanning...</div>
+                </div>
+                <button class="btn btn-secondary" onclick="scanNetworks()">Refresh</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-content">
+                <div class="form-group">
+                    <label class="label" for="ssid">WiFi SSID</label>
+                    <input type="text" id="ssid" class="input" placeholder="Enter or select WiFi network">
+                </div>
+                <div class="form-group">
+                    <label class="label" for="password">WiFi Password</label>
+                    <input type="password" id="password" class="input" placeholder="Enter WiFi password">
+                </div>
+                <button class="btn btn-primary" onclick="saveWiFi()">Save & Connect</button>
+                <button class="btn btn-secondary mt-2" onclick="clearWiFi()">Clear Saved Credentials</button>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/" class="link">← Back to IRK Finder</a>
         </div>
     </div>
 </body>
@@ -872,30 +1143,56 @@ void BT_Init() {
     Serial.println("Bluetooth initialized - Passkey: 123456");
 }
 
-// Setup WiFi
+// Setup WiFi with saved credentials or AP mode
 void setupWiFi() {
-    Serial.println("Connecting to WiFi...");
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    // Load saved WiFi credentials
+    preferences.begin("wifi", false);
+    stored_ssid = preferences.getString("ssid", "");
+    stored_password = preferences.getString("password", "");
+    preferences.end();
 
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
+    // Try to connect if we have saved credentials
+    if (stored_ssid.length() > 0) {
+        Serial.println("Attempting to connect with saved WiFi credentials...");
+        Serial.print("SSID: ");
+        Serial.println(stored_ssid);
+
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(stored_ssid.c_str(), stored_password.c_str());
+
+        int attempts = 0;
+        while (WiFi.status() != WL_CONNECTED && attempts < 40) {  // 20 seconds timeout
+            delay(500);
+            Serial.print(".");
+            attempts++;
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("\nWiFi connected!");
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+            isAPMode = false;
+            return;
+        } else {
+            Serial.println("\nFailed to connect with saved credentials.");
+        }
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\nWiFi connected!");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
-    } else {
-        Serial.println("\nFailed to connect to WiFi. Starting AP mode...");
-        WiFi.mode(WIFI_AP);
-        WiFi.softAP(AP_SSID, AP_PASSWORD);
-        Serial.print("AP IP address: ");
-        Serial.println(WiFi.softAPIP());
-    }
+    // Start AP mode if no credentials or connection failed
+    Serial.println("Starting AP mode for configuration...");
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(AP_SSID, AP_PASSWORD);
+    isAPMode = true;
+
+    Serial.println("\n========================================");
+    Serial.println("Access Point Started!");
+    Serial.print("SSID: ");
+    Serial.println(AP_SSID);
+    Serial.print("Password: ");
+    Serial.println(AP_PASSWORD);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.println("========================================\n");
 }
 
 // Setup web server
@@ -911,7 +1208,77 @@ void setupWebServer() {
         json += "\"irkBase64\":\"" + currentIRKBase64 + "\",";
         json += "\"irkArray\":\"" + currentIRKArray + "\",";
         json += "\"mac\":\"" + connectedDeviceMAC + "\",";
-        json += "\"irkRetrieved\":" + String(irkRetrieved ? "true" : "false");
+        json += "\"irkRetrieved\":" + String(irkRetrieved ? "true" : "false") + ",";
+        json += "\"isAPMode\":" + String(isAPMode ? "true" : "false") + ",";
+        json += "\"ipAddress\":\"" + (isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString()) + "\"";
+        json += "}";
+        request->send(200, "application/json", json);
+    });
+
+    // WiFi Configuration page
+    server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send_P(200, "text/html", wifi_html);
+    });
+
+    // WiFi Scan API
+    server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request){
+        String json = "{\"networks\":[";
+        int n = WiFi.scanNetworks();
+
+        for (int i = 0; i < n; i++) {
+            if (i > 0) json += ",";
+            json += "{";
+            json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
+            json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
+            json += "\"encryption\":" + String(WiFi.encryptionType(i));
+            json += "}";
+        }
+
+        json += "]}";
+        request->send(200, "application/json", json);
+    });
+
+    // Save WiFi credentials
+    server.on("/api/wifi/save", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+            DynamicJsonDocument doc(256);
+            deserializeJson(doc, (char*)data);
+
+            String ssid = doc["ssid"].as<String>();
+            String password = doc["password"].as<String>();
+
+            preferences.begin("wifi", false);
+            preferences.putString("ssid", ssid);
+            preferences.putString("password", password);
+            preferences.end();
+
+            String response = "{\"success\":true}";
+            request->send(200, "application/json", response);
+
+            delay(1000);
+            ESP.restart();
+        });
+
+    // Clear WiFi credentials
+    server.on("/api/wifi/clear", HTTP_POST, [](AsyncWebServerRequest *request){
+        preferences.begin("wifi", false);
+        preferences.clear();
+        preferences.end();
+
+        String response = "{\"success\":true}";
+        request->send(200, "application/json", response);
+
+        delay(1000);
+        ESP.restart();
+    });
+
+    // WiFi status
+    server.on("/api/wifi/status", HTTP_GET, [](AsyncWebServerRequest *request){
+        String json = "{";
+        json += "\"connected\":" + String(WiFi.status() == WL_CONNECTED ? "true" : "false") + ",";
+        json += "\"ssid\":\"" + (WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "") + "\",";
+        json += "\"ip\":\"" + (isAPMode ? WiFi.softAPIP().toString() : WiFi.localIP().toString()) + "\",";
+        json += "\"mode\":\"" + String(isAPMode ? "AP" : "Station") + "\"";
         json += "}";
         request->send(200, "application/json", json);
     });

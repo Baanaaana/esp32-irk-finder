@@ -25,93 +25,122 @@ git clone https://github.com/yourusername/esp32-irk-finder.git
 cd esp32-irk-finder
 ```
 
-2. Configure WiFi credentials in `include/config.h`:
-```cpp
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-```
-
-   Alternatively, use AP mode by setting:
-```cpp
-#define USE_AP_MODE true
-```
-
-3. Build and upload using PlatformIO:
+2. Build and upload using PlatformIO:
 ```bash
 pio run -t upload
 ```
 
-4. Monitor serial output:
+3. Monitor serial output:
 ```bash
 pio device monitor
 ```
 
 ## Usage
 
+### Initial Setup - WiFi Configuration:
+
+On first use, the ESP32 will start in Access Point (AP) mode:
+
+1. Connect to the ESP32's WiFi network:
+   - SSID: `ESP32-IRK-FINDER`
+   - Password: `12345678`
+
+2. Open your browser and navigate to `http://192.168.4.1`
+
+3. Click "Configure WiFi" button
+
+4. Select your WiFi network from the list or enter SSID manually
+
+5. Enter your WiFi password and click "Save & Connect"
+
+6. The ESP32 will restart and connect to your WiFi network
+
 ### Getting the iPhone IRK:
 
 1. Power on the ESP32 and wait for it to initialize
-2. Note the IP address from serial output or connect to AP mode:
-   - SSID: `ESP32-IRK-FINDER`
-   - Password: `12345678`
-3. Open web browser and navigate to the ESP32's IP address (192.168.4.1 in AP mode)
-4. Click "Start New Pairing" button on the web interface
-5. On your iPhone:
-   - Go to Settings → Bluetooth
-   - Find "ESP32_IRK_FINDER" and tap to connect
-   - Confirm the passkey: **123456**
-   - Accept the pairing request
-6. The IRK will be displayed on both the web interface and serial console
+2. If connected to WiFi, note the IP address from serial output
+   - Or connect via AP mode: `192.168.4.1`
+3. Open web browser and navigate to the ESP32's IP address
+4. On your iPhone, download a BLE scanner app:
+   - LightBlue
+   - nRF Connect
+   - Bluetooth Terminal
+   - BLE Scanner
+5. Open the BLE scanner app and scan for devices
+6. Find "ESP32_IRK_FINDER" and tap to connect
+7. When prompted for pairing, accept the request
+8. Enter passkey: **123456**
+9. The IRK will be displayed on the web interface in multiple formats:
+   - Standard Hex
+   - ESPresense (reversed)
+   - Base64 (for Home Assistant Private BLE)
+   - Hex Array
 
-### Web Interface
+### Web Interface Features
 
 The web interface provides:
-- Current IRK display (32 hex characters)
+- IRK display in 4 different formats (Hex, ESPresense, Base64, Array)
 - Connected device MAC address
-- Pairing status
-- Button to start new pairing session
+- Copy buttons for each IRK format
+- WiFi configuration portal
+- Network scanning and selection
 - Auto-refresh every 2 seconds
+- Clean, modern shadcn-style UI
 
 ### API Endpoints
 
-- `GET /` - Main web interface
-- `GET /api/status` - JSON status (IRK, MAC, pairing status)
-- `POST /api/start-pairing` - Start new pairing session
+- `GET /` - Main IRK finder interface
+- `GET /wifi` - WiFi configuration page
+- `GET /api/status` - JSON status with all IRK formats
+- `GET /api/wifi/scan` - Scan for WiFi networks
+- `POST /api/wifi/save` - Save WiFi credentials
+- `POST /api/wifi/clear` - Clear saved WiFi credentials
+- `GET /api/wifi/status` - Current WiFi connection status
 
-Example JSON response:
+Example status response:
 ```json
 {
-  "irk": "1234567890ABCDEF1234567890ABCDEF",
+  "irk": "112233445566778899AABBCCDDEEFF00",
+  "irkReversed": "00FFEEDDCCBBAA998877665544332211",
+  "irkBase64": "ESIzRFVmd4iZqrvM3e7/AA==",
+  "irkArray": "0x11,0x22,0x33,0x44,0x55,0x66,...",
   "mac": "AA:BB:CC:DD:EE:FF",
-  "isPairing": false,
-  "irkRetrieved": true
+  "irkRetrieved": true,
+  "isAPMode": false,
+  "ipAddress": "192.168.1.100"
 }
 ```
 
 ## Configuration Options
 
-Edit `include/config.h` to customize:
+Edit `include/config.h` to customize defaults:
 
-- `WIFI_SSID` / `WIFI_PASSWORD` - WiFi credentials
-- `USE_AP_MODE` - Use Access Point mode instead of connecting to WiFi
-- `AP_SSID` / `AP_PASSWORD` - Access Point credentials
-- `BLE_DEVICE_NAME` - Bluetooth device name
+- `AP_SSID` - Access Point name (default: "ESP32-IRK-FINDER")
+- `AP_PASSWORD` - Access Point password (default: "12345678")
+- `BLE_DEVICE_NAME` - Bluetooth device name (default: "ESP32_IRK_FINDER")
 - `BLE_PASSKEY` - Pairing passkey (default: 123456)
 - `LED_PIN` - Status LED pin (default: 2)
+- `WEB_SERVER_PORT` - Web server port (default: 80)
+
+Note: WiFi credentials are now configured through the web interface and stored persistently.
 
 ## Troubleshooting
 
-- **Can't connect to WiFi**: Check credentials in config.h or use AP mode
-- **iPhone doesn't show ESP32**: Ensure Bluetooth is enabled and try clicking "Start New Pairing"
-- **IRK not retrieved**: Make sure to accept pairing and confirm the passkey
+- **Can't connect to WiFi**: Use the web configuration portal in AP mode
+- **iPhone doesn't show ESP32**: The device only appears in BLE scanner apps, not in iPhone Settings
+- **IRK not retrieved**: Make sure to accept pairing and confirm the passkey (123456)
 - **Web interface not accessible**: Check serial output for correct IP address
+- **WiFi credentials lost**: Clear credentials via web interface and reconfigure
 
 ## Technical Details
 
-- Uses NimBLE-Arduino library for better iOS compatibility
+- Uses ESP-IDF Bluedroid stack for reliable iOS compatibility
 - AsyncWebServer for non-blocking web interface
 - Implements secure BLE bonding with IRK exchange
-- Stores IRK in memory (resets on power cycle)
+- Preferences library for persistent WiFi credential storage
+- Automatic AP mode fallback when WiFi connection fails
+- IRK displayed in multiple formats for various integrations
+- Bonds are cleared on each startup for fresh pairing
 
 ## Security Note
 
