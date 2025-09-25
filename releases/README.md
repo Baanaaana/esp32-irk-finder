@@ -1,11 +1,12 @@
 # ESP32 IRK Finder - Prebuilt Firmware
 
-This folder contains prebuilt firmware binaries for ESP32 and ESP32-S3 devices.
+This folder contains prebuilt firmware binaries for ESP32, ESP32-S3, and ESP32-C3 devices.
 
 ## Files
 
 - `esp32-irk-finder.bin` - Complete firmware for ESP32 (includes bootloader, partitions, and application)
 - `esp32-s3-irk-finder.bin` - Complete firmware for ESP32-S3 (includes bootloader, partitions, and application)
+- `esp32-c3-irk-finder.bin` - Complete firmware for ESP32-C3 (includes bootloader, partitions, and application)
 
 ## Flashing Instructions
 
@@ -13,13 +14,14 @@ This folder contains prebuilt firmware binaries for ESP32 and ESP32-S3 devices.
 
 1. Open Chrome or Edge browser
 2. Go to https://web.esphome.io/
-3. Connect your ESP32 or ESP32-S3 via USB
+3. Connect your ESP32, ESP32-S3, or ESP32-C3 via USB
 4. Click "CONNECT"
 5. Select your device from the list
 6. Click "INSTALL"
 7. Choose "Choose File" and select:
    - **ESP32**: `esp32-irk-finder.bin`
    - **ESP32-S3**: `esp32-s3-irk-finder.bin`
+   - **ESP32-C3**: `esp32-c3-irk-finder.bin`
 8. Click "INSTALL" and wait for the process to complete
 
 ### Option 2: Using esptool
@@ -38,6 +40,14 @@ esptool.py --chip esp32s3 --port /dev/ttyUSB0 --baud 460800 \
   --before default_reset --after hard_reset \
   write_flash -z --flash_mode dio --flash_freq 80m --flash_size 8MB \
   0x0 esp32-s3-irk-finder.bin
+```
+
+#### For ESP32-C3:
+```bash
+esptool.py --chip esp32c3 --port /dev/ttyUSB0 --baud 460800 \
+  --before default_reset --after hard_reset \
+  write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB \
+  0x0 esp32-c3-irk-finder.bin
 ```
 
 Replace `/dev/ttyUSB0` with your actual port:
