@@ -58,6 +58,33 @@ python3 get-platformio.py
 
 ## Installation
 
+### Option A: Using Prebuilt Firmware (Easiest)
+
+#### Web Installer (Recommended)
+1. Connect your ESP32 to your computer via USB
+2. Open Chrome or Edge browser
+3. Go to https://web.esphome.io/
+4. Click "CONNECT" and select your ESP32
+5. Click "INSTALL"
+6. Choose "Choose File" and select `releases/esp32-irk-finder.bin`
+7. Click "INSTALL" and wait for completion
+
+#### Manual Install with esptool
+1. Download `esp32-irk-finder.bin` from the `releases` folder
+2. Install esptool (if not already installed):
+   ```bash
+   pip install esptool
+   ```
+3. Flash the firmware:
+   ```bash
+   esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
+     write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB \
+     0x0 esp32-irk-finder.bin
+   ```
+   Replace `/dev/ttyUSB0` with your ESP32's port (e.g., `COM3` on Windows, `/dev/cu.usbserial-0001` on macOS)
+
+### Option B: Building from Source
+
 1. Clone this repository:
 ```bash
 git clone https://github.com/yourusername/esp32-irk-finder.git

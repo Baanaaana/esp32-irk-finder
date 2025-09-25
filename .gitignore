@@ -81,6 +81,9 @@ yarn.lock
 *.elf
 *.hex
 
+# Allow releases folder binaries
+!releases/*.bin
+
 # Debug files
 *.dSYM/
 *.su
