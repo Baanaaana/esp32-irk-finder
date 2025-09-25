@@ -47,8 +47,9 @@ On first use, the ESP32 will start in Access Point (AP) mode for WiFi configurat
 ### Step-by-Step Instructions
 
 1. **Access the Web Interface**
-   - If connected to WiFi: Open browser and go to ESP32's IP address
-   - If in AP mode: Connect to ESP32 WiFi and go to `http://192.168.4.1`
+   - If connected to WiFi: Open browser and go to `http://esp32-irk-finder.local`
+   - Alternative: Use the ESP32's IP address (shown in serial monitor)
+   - If in AP mode: Connect to ESP32 WiFi and go to `http://192.168.4.1` or `http://esp32-irk-finder.local`
 
 2. **Install a BLE Scanner App**
 
@@ -86,6 +87,21 @@ The web interface displays the IRK in four formats:
 4. **Hex Array** - Comma-separated hex values for programming
 
 Each format has a dedicated copy button for easy clipboard access.
+
+### Resetting for a New Device
+
+When you want to retrieve the IRK from a different iPhone:
+
+1. Click the **Reset IRK** button that appears after an IRK is retrieved
+2. Confirm the reset action when prompted
+3. The current IRK will be cleared and all paired devices removed
+4. Follow the pairing steps again with the new iPhone
+
+The reset function:
+- Clears the stored IRK immediately
+- Removes all Bluetooth bonded devices
+- Does not require restarting the ESP32
+- Allows you to pair with a new device right away
 
 ---
 

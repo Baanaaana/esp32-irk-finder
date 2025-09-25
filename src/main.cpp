@@ -24,6 +24,7 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <DNSServer.h>
+#include <ESPmDNS.h>
 #include "config.h"
 
 // Web server
@@ -35,6 +36,9 @@ const byte DNS_PORT = 53;
 
 // Preferences for storing WiFi credentials
 Preferences preferences;
+
+// mDNS hostname
+const char* mdnsHostname = "esp32-irk-finder";
 
 // WiFi configuration
 String stored_ssid = "";
@@ -357,6 +361,21 @@ const char index_html[] PROGMEM = R"rawliteral(
             white-space: nowrap;
         }
 
+        .btn-danger {
+            background: var(--destructive);
+            color: var(--destructive-foreground);
+            border-color: var(--destructive);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .reset-container {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
         .instructions {
             background: var(--muted);
             border-radius: var(--radius);
@@ -453,17 +472,20 @@ const char index_html[] PROGMEM = R"rawliteral(
                     const formatsDiv = document.getElementById('irk-formats');
                     const macDiv = document.getElementById('mac-container');
                     const wifiConfigDiv = document.getElementById('wifi-config-link');
+                    const resetDiv = document.getElementById('reset-container');
 
                     if (data.irkRetrieved) {
                         statusDiv.className = 'alert alert-success';
                         statusDiv.textContent = 'IRK Successfully Retrieved!';
                         formatsDiv.classList.remove('hidden');
                         macDiv.classList.remove('hidden');
+                        resetDiv.classList.remove('hidden');
                     } else {
                         statusDiv.className = 'alert alert-warning';
                         statusDiv.textContent = 'Waiting for iPhone pairing...';
                         formatsDiv.classList.add('hidden');
                         macDiv.classList.add('hidden');
+                        resetDiv.classList.add('hidden');
                     }
 
                     // Show WiFi config link if in AP mode
@@ -471,6 +493,24 @@ const char index_html[] PROGMEM = R"rawliteral(
                         wifiConfigDiv.classList.remove('hidden');
                     }
                 });
+        }
+
+        function resetIRK() {
+            if (confirm('Are you sure you want to reset the IRK? This will clear the current IRK and remove all paired devices.')) {
+                fetch('/api/reset', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('IRK reset successfully. You can now pair a new device.');
+                            location.reload();
+                        } else {
+                            alert('Failed to reset IRK: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error resetting IRK: ' + error);
+                    });
+            }
         }
 
         setInterval(refreshData, 2000);
@@ -536,6 +576,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div id="reset-container" class="reset-container hidden">
+            <button class="btn btn-danger" onclick="resetIRK()" style="padding: 0.625rem 2rem; width: auto;">Reset IRK</button>
+            <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--muted-foreground);">Clear IRK and remove all paired devices</p>
         </div>
 
         <div id="wifi-config-link" class="card hidden">
@@ -1165,9 +1210,24 @@ void setupWiFi() {
         }
 
         if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\nWiFi connected!");
-            Serial.print("IP address: ");
+            Serial.println("\n========================================");
+            Serial.println("WiFi connected successfully!");
+            Serial.println("Access the device at:");
+            Serial.print("  - http://");
+            Serial.print(mdnsHostname);
+            Serial.println(".local");
+            Serial.print("  - http://");
             Serial.println(WiFi.localIP());
+            Serial.println("========================================");
+
+            // Start mDNS
+            if (MDNS.begin(mdnsHostname)) {
+                MDNS.addService("http", "tcp", 80);
+                Serial.println("mDNS responder started");
+            } else {
+                Serial.println("Error starting mDNS");
+            }
+
             isAPMode = false;
             return;
         } else {
@@ -1181,18 +1241,30 @@ void setupWiFi() {
     WiFi.softAP(AP_SSID, AP_PASSWORD);
     isAPMode = true;
 
+    // Start mDNS even in AP mode
+    if (MDNS.begin(mdnsHostname)) {
+        Serial.print("mDNS responder started. Access at: http://");
+        Serial.print(mdnsHostname);
+        Serial.println(".local");
+        MDNS.addService("http", "tcp", 80);
+    }
+
     // Start DNS server for captive portal
     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
     Serial.println("\n========================================");
     Serial.println("Access Point Started!");
-    Serial.print("SSID: ");
+    Serial.print("WiFi SSID: ");
     Serial.println(AP_SSID);
-    Serial.print("Password: ");
+    Serial.print("WiFi Password: ");
     Serial.println(AP_PASSWORD);
-    Serial.print("IP address: ");
+    Serial.println("\nAccess the device at:");
+    Serial.print("  - http://");
+    Serial.print(mdnsHostname);
+    Serial.println(".local");
+    Serial.print("  - http://");
     Serial.println(WiFi.softAPIP());
-    Serial.println("Connect and you'll be redirected to WiFi config");
+    Serial.println("\nConnect to WiFi and you'll be redirected to config");
     Serial.println("========================================\n");
 }
 
@@ -1271,6 +1343,25 @@ void setupWebServer() {
         request->send(200, "application/json", json);
     });
 
+    // Reset IRK endpoint
+    server.on("/api/reset", HTTP_POST, [](AsyncWebServerRequest *request){
+        // Clear IRK data
+        currentIRK = "No IRK retrieved yet";
+        currentIRKBase64 = "";
+        currentIRKReversed = "";
+        currentIRKArray = "";
+        connectedDeviceMAC = "None";
+        irkRetrieved = false;
+
+        // Clear bonded devices
+        remove_all_bonded_devices();
+
+        Serial.println("IRK reset requested via web interface");
+
+        String response = "{\"success\":true}";
+        request->send(200, "application/json", response);
+    });
+
     // Captive portal handler - redirect all unknown URLs to WiFi config in AP mode
     server.onNotFound([](AsyncWebServerRequest *request){
         if (isAPMode) {
@@ -1338,8 +1429,12 @@ void setup() {
 
     Serial.println("\n========================================");
     Serial.println("System ready!");
-    Serial.print("Web interface: http://");
-    Serial.println(WiFi.localIP());
+    Serial.println("Web interface:");
+    Serial.print("  - http://");
+    Serial.print(mdnsHostname);
+    Serial.println(".local");
+    Serial.print("  - http://");
+    Serial.println(isAPMode ? WiFi.softAPIP() : WiFi.localIP());
     Serial.println("BLE Device name: ESP32_IRK_FINDER");
     Serial.println("Passkey: 123456");
     Serial.println("========================================\n");

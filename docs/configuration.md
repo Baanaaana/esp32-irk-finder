@@ -33,6 +33,9 @@ The main configuration is stored in `include/config.h`. Create this file if it d
 // Web Server Configuration
 #define WEB_SERVER_PORT 80
 
+// mDNS Hostname (access as esp32-irk-finder.local)
+#define MDNS_HOSTNAME "esp32-irk-finder"
+
 #endif
 ```
 

@@ -35,6 +35,8 @@ For detailed instructions, see the **[Installation Guide](docs/installation.md)*
 - ✅ RESTful API for integration
 - ✅ Real-time status updates
 - ✅ Persistent credential storage
+- ✅ Reset button to clear IRK and pair new device
+- ✅ mDNS hostname (esp32-irk-finder.local)
 
 ## Supported Devices
 

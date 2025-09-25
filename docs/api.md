@@ -16,8 +16,8 @@
 The ESP32 IRK Finder provides a RESTful API for retrieving IRK data and managing WiFi configuration. All endpoints are accessible via HTTP on port 80.
 
 ### Base URLs
-- **When connected to WiFi:** `http://<device-ip>/`
-- **In AP mode:** `http://192.168.4.1/`
+- **When connected to WiFi:** `http://esp32-irk-finder.local/` or `http://<device-ip>/`
+- **In AP mode:** `http://192.168.4.1/` or `http://esp32-irk-finder.local/`
 
 ---
 
@@ -30,7 +30,7 @@ The ESP32 IRK Finder provides a RESTful API for retrieving IRK data and managing
 
 **Usage:**
 ```
-http://192.168.1.100/
+http://esp32-irk-finder.local/
 ```
 
 ---
@@ -64,7 +64,7 @@ http://192.168.1.100/
 
 **Example Usage:**
 ```bash
-curl http://192.168.1.100/api/status
+curl http://esp32-irk-finder.local/api/status
 ```
 
 ---
@@ -159,6 +159,30 @@ curl -X POST http://192.168.4.1/api/wifi/save \
 **Example Usage:**
 ```bash
 curl -X POST http://192.168.1.100/api/wifi/clear
+```
+
+---
+
+### POST /api/reset
+**Description:** Reset IRK and clear all paired devices
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Notes:**
+- Clears the currently stored IRK
+- Removes all Bluetooth bonded devices
+- Allows pairing with a new iPhone
+- Does not restart the device
+- Web interface will reflect the reset immediately
+
+**Example Usage:**
+```bash
+curl -X POST http://192.168.1.100/api/reset
 ```
 
 ---

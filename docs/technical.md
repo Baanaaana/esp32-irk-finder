@@ -53,6 +53,11 @@
    - Persistent storage for WiFi credentials
    - NVS (Non-Volatile Storage) backend
 
+5. **mDNS Responder**
+   - Hostname resolution (esp32-irk-finder.local)
+   - Service advertisement for HTTP on port 80
+   - Works in both Station and AP modes
+
 ---
 
 ## BLE Implementation
