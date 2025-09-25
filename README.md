@@ -7,27 +7,33 @@ A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) throug
 ## Quick Start - Using Prebuilt Firmware
 
 ### Web Installer (Recommended)
-1. Connect your ESP32 to your computer via USB
+1. Connect your ESP32 or ESP32-S3 to your computer via USB
 2. Open Chrome or Edge browser
 3. Go to https://web.esphome.io/
-4. Click "CONNECT" and select your ESP32
+4. Click "CONNECT" and select your device
 5. Click "INSTALL"
-6. Choose "Choose File" and select `releases/esp32-irk-finder.bin`
+6. Choose "Choose File" and select:
+   - **ESP32**: `releases/esp32-irk-finder.bin`
+   - **ESP32-S3**: `releases/esp32-s3-irk-finder.bin`
 7. Click "INSTALL" and wait for completion
 
 ### Manual Install with esptool
-1. Download `esp32-irk-finder.bin` from the `releases` folder
-2. Install esptool (if not already installed):
-   ```bash
-   pip install esptool
-   ```
-3. Flash the firmware:
-   ```bash
-   esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
-     write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB \
-     0x0 esp32-irk-finder.bin
-   ```
-   Replace `/dev/ttyUSB0` with your ESP32's port (e.g., `COM3` on Windows, `/dev/cu.usbserial-0001` on macOS)
+
+#### For ESP32:
+```bash
+esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 \
+  write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB \
+  0x0 esp32-irk-finder.bin
+```
+
+#### For ESP32-S3:
+```bash
+esptool.py --chip esp32s3 --port /dev/ttyUSB0 --baud 460800 \
+  write_flash -z --flash_mode dio --flash_freq 80m --flash_size 8MB \
+  0x0 esp32-s3-irk-finder.bin
+```
+
+Replace `/dev/ttyUSB0` with your device's port (e.g., `COM3` on Windows, `/dev/cu.usbserial-0001` on macOS)
 
 ## Features
 
@@ -40,7 +46,7 @@ A simple ESP32 firmware to retrieve iPhone's IRK (Identity Resolving Key) throug
 
 ## Requirements
 
-- ESP32 development board
+- ESP32 or ESP32-S3 development board
 - iPhone for testing
 - PlatformIO (only needed if building from source)
 
