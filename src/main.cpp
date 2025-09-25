@@ -23,10 +23,15 @@
 #include <AsyncTCP.h>
 #include <Preferences.h>
 #include <ArduinoJson.h>
+#include <DNSServer.h>
 #include "config.h"
 
 // Web server
 AsyncWebServer server(WEB_SERVER_PORT);
+
+// DNS server for captive portal
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
 
 // Preferences for storing WiFi credentials
 Preferences preferences;
@@ -687,41 +692,6 @@ const char wifi_html[] PROGMEM = R"rawliteral(
         .mt-2 { margin-top: 1rem; }
     </style>
     <script>
-        let scanInterval;
-
-        function scanNetworks() {
-            document.getElementById('networks-list').innerHTML = '<div class="loading">Scanning...</div>';
-
-            fetch('/api/wifi/scan')
-                .then(response => response.json())
-                .then(data => {
-                    const list = document.getElementById('networks-list');
-                    if (data.networks && data.networks.length > 0) {
-                        list.innerHTML = '';
-                        data.networks.forEach(network => {
-                            const item = document.createElement('div');
-                            item.className = 'network-item';
-                            item.innerHTML = `
-                                <span class="network-ssid">${network.ssid}</span>
-                                <span class="network-rssi">${network.rssi} dBm</span>
-                            `;
-                            item.onclick = () => selectNetwork(network.ssid);
-                            list.appendChild(item);
-                        });
-                    } else {
-                        list.innerHTML = '<div class="loading">No networks found</div>';
-                    }
-                })
-                .catch(err => {
-                    document.getElementById('networks-list').innerHTML =
-                        '<div class="loading">Error scanning networks</div>';
-                });
-        }
-
-        function selectNetwork(ssid) {
-            document.getElementById('ssid').value = ssid;
-        }
-
         function saveWiFi() {
             const ssid = document.getElementById('ssid').value;
             const password = document.getElementById('password').value;
@@ -757,15 +727,6 @@ const char wifi_html[] PROGMEM = R"rawliteral(
                     });
             }
         }
-
-        window.onload = () => {
-            scanNetworks();
-            scanInterval = setInterval(scanNetworks, 10000); // Scan every 10 seconds
-        };
-
-        window.onbeforeunload = () => {
-            if (scanInterval) clearInterval(scanInterval);
-        };
     </script>
 </head>
 <body>
@@ -774,23 +735,14 @@ const char wifi_html[] PROGMEM = R"rawliteral(
 
         <div class="alert alert-info">
             Connect ESP32 to your WiFi network
-        </div>
-
-        <div class="card">
-            <div class="card-content">
-                <h3 style="margin-bottom: 1rem;">Available Networks</h3>
-                <div id="networks-list" class="networks-list">
-                    <div class="loading">Scanning...</div>
-                </div>
-                <button class="btn btn-secondary" onclick="scanNetworks()">Refresh</button>
-            </div>
+            <p style="font-size: 0.75rem; margin-top: 0.5rem;">Note: You can still retrieve IRKs in AP mode. <a href="/" style="color: #1e40af; text-decoration: underline;">Go to IRK Finder</a></p>
         </div>
 
         <div class="card">
             <div class="card-content">
                 <div class="form-group">
                     <label class="label" for="ssid">WiFi SSID</label>
-                    <input type="text" id="ssid" class="input" placeholder="Enter or select WiFi network">
+                    <input type="text" id="ssid" class="input" placeholder="Enter WiFi network name">
                 </div>
                 <div class="form-group">
                     <label class="label" for="password">WiFi Password</label>
@@ -802,7 +754,7 @@ const char wifi_html[] PROGMEM = R"rawliteral(
         </div>
 
         <div style="text-align: center; margin-top: 2rem;">
-            <a href="/" class="link">← Back to IRK Finder</a>
+            <a href="/" class="link">Back to IRK Finder</a>
         </div>
     </div>
 </body>
@@ -1184,6 +1136,9 @@ void setupWiFi() {
     WiFi.softAP(AP_SSID, AP_PASSWORD);
     isAPMode = true;
 
+    // Start DNS server for captive portal
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+
     Serial.println("\n========================================");
     Serial.println("Access Point Started!");
     Serial.print("SSID: ");
@@ -1192,13 +1147,19 @@ void setupWiFi() {
     Serial.println(AP_PASSWORD);
     Serial.print("IP address: ");
     Serial.println(WiFi.softAPIP());
+    Serial.println("Connect and you'll be redirected to WiFi config");
     Serial.println("========================================\n");
 }
 
 // Setup web server
 void setupWebServer() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send_P(200, "text/html", index_html);
+        // If in AP mode, always redirect to WiFi config
+        if (isAPMode) {
+            request->redirect("/wifi");
+        } else {
+            request->send_P(200, "text/html", index_html);
+        }
     });
 
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -1218,24 +1179,6 @@ void setupWebServer() {
     // WiFi Configuration page
     server.on("/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send_P(200, "text/html", wifi_html);
-    });
-
-    // WiFi Scan API
-    server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request){
-        String json = "{\"networks\":[";
-        int n = WiFi.scanNetworks();
-
-        for (int i = 0; i < n; i++) {
-            if (i > 0) json += ",";
-            json += "{";
-            json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-            json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-            json += "\"encryption\":" + String(WiFi.encryptionType(i));
-            json += "}";
-        }
-
-        json += "]}";
-        request->send(200, "application/json", json);
     });
 
     // Save WiFi credentials
@@ -1281,6 +1224,16 @@ void setupWebServer() {
         json += "\"mode\":\"" + String(isAPMode ? "AP" : "Station") + "\"";
         json += "}";
         request->send(200, "application/json", json);
+    });
+
+    // Captive portal handler - redirect all unknown URLs to WiFi config in AP mode
+    server.onNotFound([](AsyncWebServerRequest *request){
+        if (isAPMode) {
+            // Redirect to WiFi config page for captive portal
+            request->redirect("http://192.168.4.1/wifi");
+        } else {
+            request->send(404, "text/plain", "Not Found");
+        }
     });
 
     server.begin();
@@ -1348,6 +1301,11 @@ void setup() {
 }
 
 void loop() {
+    // Process DNS requests in AP mode
+    if (isAPMode) {
+        dnsServer.processNextRequest();
+    }
+
     delay(1000);
 
     // Check for bonded devices periodically

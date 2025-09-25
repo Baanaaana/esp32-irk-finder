@@ -46,14 +46,15 @@ On first use, the ESP32 will start in Access Point (AP) mode:
    - Password: `12345678`
 
 2. Open your browser and navigate to `http://192.168.4.1`
+   - You'll be automatically redirected to the WiFi configuration page
 
-3. Click "Configure WiFi" button
+3. Select your WiFi network from the list or enter SSID manually
 
-4. Select your WiFi network from the list or enter SSID manually
+4. Enter your WiFi password and click "Save & Connect"
 
-5. Enter your WiFi password and click "Save & Connect"
+5. The ESP32 will restart and connect to your WiFi network
 
-6. The ESP32 will restart and connect to your WiFi network
+Note: You can still retrieve IRKs while in AP mode by navigating directly to the IRK finder page
 
 ### Getting the iPhone IRK:
 
