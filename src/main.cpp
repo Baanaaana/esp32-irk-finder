@@ -1189,11 +1189,38 @@ void BT_Init() {
 
 // Setup WiFi with saved credentials or AP mode
 void setupWiFi() {
+    // Check if we should force AP mode from .env configuration
+    #if USE_AP_MODE == 1
+        Serial.println("AP mode forced by configuration (USE_AP_MODE=true in .env)");
+        startAPMode();
+        return;
+    #endif
+
     // Load saved WiFi credentials
     preferences.begin("wifi", false);
     stored_ssid = preferences.getString("ssid", "");
     stored_password = preferences.getString("password", "");
     preferences.end();
+
+    // If no saved credentials, check if we have compiled-in credentials from .env
+    if (stored_ssid.length() == 0) {
+        String defaultSSID = WIFI_SSID;
+        String defaultPassword = WIFI_PASSWORD;
+
+        // Only use compiled credentials if they're not the default placeholders
+        if (defaultSSID != "YOUR_WIFI_SSID" && defaultPassword != "YOUR_WIFI_PASSWORD") {
+            Serial.println("No saved WiFi credentials found. Using credentials from .env file...");
+            stored_ssid = defaultSSID;
+            stored_password = defaultPassword;
+
+            // Save these credentials for next boot
+            preferences.begin("wifi", false);
+            preferences.putString("ssid", stored_ssid);
+            preferences.putString("password", stored_password);
+            preferences.end();
+            Serial.println("Credentials saved to device storage.");
+        }
+    }
 
     // Try to connect if we have saved credentials
     if (stored_ssid.length() > 0) {
