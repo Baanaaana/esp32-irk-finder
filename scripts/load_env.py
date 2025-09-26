@@ -11,6 +11,11 @@ Import("env")
 
 def load_dotenv():
     """Load variables from .env file into environment"""
+    # Check if this is a release build (skip .env loading)
+    if os.environ.get('RELEASE_BUILD') == '1':
+        print("Release build mode: Skipping .env file (using defaults from config.h)")
+        return
+
     # Find project root directory
     project_dir = Path(env['PROJECT_DIR'])
     env_file = project_dir / '.env'
