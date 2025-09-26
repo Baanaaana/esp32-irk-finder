@@ -1196,35 +1196,67 @@ void setupWiFi() {
         return;
     #endif
 
-    // Load saved WiFi credentials
-    preferences.begin("wifi", false);
-    stored_ssid = preferences.getString("ssid", "");
-    stored_password = preferences.getString("password", "");
-    preferences.end();
+    // First, check if we have valid credentials from .env
+    String envSSID = WIFI_SSID;
+    String envPassword = WIFI_PASSWORD;
+    bool useEnvCredentials = false;
 
-    // If no saved credentials, check if we have compiled-in credentials from .env
-    if (stored_ssid.length() == 0) {
-        String defaultSSID = WIFI_SSID;
-        String defaultPassword = WIFI_PASSWORD;
+    // Check if .env has valid credentials (not placeholders)
+    if (envSSID != "YOUR_WIFI_SSID" && envPassword != "YOUR_WIFI_PASSWORD" &&
+        envSSID.length() > 0 && envPassword.length() > 0) {
 
-        // Only use compiled credentials if they're not the default placeholders
-        if (defaultSSID != "YOUR_WIFI_SSID" && defaultPassword != "YOUR_WIFI_PASSWORD") {
-            Serial.println("No saved WiFi credentials found. Using credentials from .env file...");
-            stored_ssid = defaultSSID;
-            stored_password = defaultPassword;
+        Serial.println("Valid WiFi credentials found in firmware (.env)");
+        Serial.print("SSID from .env: ");
+        Serial.println(envSSID);
 
-            // Save these credentials for next boot
-            preferences.begin("wifi", false);
-            preferences.putString("ssid", stored_ssid);
-            preferences.putString("password", stored_password);
-            preferences.end();
-            Serial.println("Credentials saved to device storage.");
+        // Load stored credentials to check if they're different
+        preferences.begin("wifi", false);
+        stored_ssid = preferences.getString("ssid", "");
+        stored_password = preferences.getString("password", "");
+        preferences.end();
+
+        // Check if credentials have changed
+        if (stored_ssid != envSSID || stored_password != envPassword) {
+            Serial.println("WiFi credentials have changed. Updating stored credentials...");
+        } else {
+            Serial.println("WiFi credentials unchanged.");
+        }
+
+        // Always use .env credentials when valid
+        stored_ssid = envSSID;
+        stored_password = envPassword;
+        useEnvCredentials = true;
+
+        // Save/update credentials in preferences
+        preferences.begin("wifi", false);
+        preferences.putString("ssid", stored_ssid);
+        preferences.putString("password", stored_password);
+        preferences.end();
+        Serial.println("Credentials saved/updated in device storage.");
+
+    } else {
+        // No valid .env credentials, load from stored preferences
+        Serial.println("No valid credentials in firmware (.env), checking stored credentials...");
+
+        preferences.begin("wifi", false);
+        stored_ssid = preferences.getString("ssid", "");
+        stored_password = preferences.getString("password", "");
+        preferences.end();
+
+        if (stored_ssid.length() > 0) {
+            Serial.println("Using previously stored WiFi credentials");
+            Serial.print("Stored SSID: ");
+            Serial.println(stored_ssid);
         }
     }
 
-    // Try to connect if we have saved credentials
+    // Try to connect if we have any credentials
     if (stored_ssid.length() > 0) {
-        Serial.println("Attempting to connect with saved WiFi credentials...");
+        if (useEnvCredentials) {
+            Serial.println("Attempting to connect with credentials from .env...");
+        } else {
+            Serial.println("Attempting to connect with stored credentials...");
+        }
         Serial.print("SSID: ");
         Serial.println(stored_ssid);
 
